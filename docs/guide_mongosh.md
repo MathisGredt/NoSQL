@@ -113,4 +113,4 @@ Utilisez la barre de requêtes pour exécuter des requêtes MongoDB. Par exemple
 Pour ajouter une collection : 
 ![MongoDB Compass Create Collection](/img/add-col.png)
 Pour supprimer une collection, cliquez sur l'icône de la corbeille à côté du nom de la collection dans la liste des collections :
-![MongoDB Compass Delete Collection](/img/del-col.png)
+![MongoDB Compass Delete Collection](/img/del-doc.png)
