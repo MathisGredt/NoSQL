@@ -87,7 +87,7 @@ Installez Compass en suivant les instructions pour votre système d'exploitation
 ### Connexion à une base de données
 Ouvrez MongoDB Compass et entrez l'URI de connexion pour votre base de données MongoDB. Par exemple :
 
-![MongoDB Compass Connection]()
+![MongoDB Compass Connection](/img/connection-compass.png)
 ### Navigation dans les collections
 Une fois connecté, vous pouvez naviguer dans les collections de votre base de données. Compass affiche une interface graphique pour visualiser les documents, exécuter des requêtes et gérer les index.
 ### Exécution de requêtes
@@ -97,4 +97,20 @@ Utilisez la barre de requêtes pour exécuter des requêtes MongoDB. Par exemple
 ```json
 { "age": 26 }
 ```
-![MongoDB Compass Query](https://www.mongodb.com/assets/images/compass/compass-query.png)
+![MongoDB Compass Query](../img/alice-pas-jeune.png)
+
+### Ajouter un document
+
+![MongoDB Compass Add Document](/img/add-doc1.png)
+![MongoDB Compass Add Document](/img/add-doc2.png)
+
+### Supprimer un document
+
+![MongoDB Compass Delete Document](/img/del-doc.png)
+
+### Ajouter et supprimer une collection
+
+Pour ajouter une collection : 
+![MongoDB Compass Create Collection](/img/add-col.png)
+Pour supprimer une collection, cliquez sur l'icône de la corbeille à côté du nom de la collection dans la liste des collections :
+![MongoDB Compass Delete Collection](/img/del-col.png)
