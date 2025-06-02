@@ -102,6 +102,23 @@
     function cta() {
       alert("Merci de votre visite ! Plus à venir très bientôt.");
     }
+      async function sendMessage() {
+    const text = document.getElementById('messageInput').value;
+    if (!text) return alert("Écris quelque chose !");
+    
+    const res = await fetch('http://localhost:3000/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+
+    if (res.ok) {
+      alert("Message envoyé !");
+      document.getElementById('messageInput').value = "";
+    } else {
+      alert("Erreur lors de l'envoi.");
+    }
+    }
   </script>
 </body>
 </html>
