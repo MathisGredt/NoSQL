@@ -1,3 +1,4 @@
++++markdown
 
 # Vitrine Ultra Classe avec MongoDB
 
@@ -11,10 +12,31 @@ Ce document décrit les étapes que j'ai suivies pour déployer une base de donn
 
 Étant habitué à Docker, j'ai choisi de déployer MongoDB avec Docker Compose dans Portainer. L'objectif est d'avoir une base MongoDB fonctionnelle avec une interface d'administration (mongo-express) accessible depuis l'extérieur, sécurisée par un reverse proxy et certificat SSL.
 
+### 2. Déploiement initial avec un docker-compose simple
 
-### 2. Adaptation et amélioration du docker-compose
+```
+services:
 
-Après quelques ajustements pour l'adapter à mon environnement NAS, gestion des volumes, et sécurisation des accès, voici le fichier final utilisé :
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: mysupersecretpassword
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: mysupersecretpassword
+      ME_CONFIG_MONGODB_URL: mongodb://admin:mysupersecretpassword@mongo:27017/
+      ME_CONFIG_BASICAUTH: false
+```
+
+### 3. Adaptation et amélioration du docker-compose
 
 ```
 services:
@@ -54,73 +76,173 @@ networks:
     driver: bridge
 ```
 
-### 3. Configuration réseau et accès externe
+### 4. Configuration réseau et accès externe
 
-* J'ai redirigé uniquement le port `27017` (MongoDB) de ma Freebox vers mon NAS afin que mes collègues puissent se connecter à la base depuis Internet.
-* J'utilise un sous-domaine que je possédais déjà, pointé vers mon IP publique.
-* Sur mon NAS Synology, j'ai obtenu un certificat Let's Encrypt pour ce sous-domaine.
-* J'ai mis en place un reverse proxy qui redirige directement le trafic HTTPS (port 443) vers l'interface Mongo Express, accessible via `https://mongo.valentinlamine.fr/` sans exposer le port 8081.
+* Redirection du port `27017` de la Freebox vers le NAS
+* Utilisation d’un sous-domaine pointé vers l’IP publique
+* Certificat Let's Encrypt obtenu via NAS Synology
+* Reverse proxy redirigeant le trafic HTTPS (port 443) vers Mongo Express (`https://mongo.valentinlamine.fr/`)
 
-### 4. Résultats
+### 5. Résultats
 
-* MongoDB est accessible en standalone depuis l’extérieur.
-* Mongo Express est accessible via HTTPS avec authentification basique.
-* Mes collègues peuvent maintenant se connecter et manipuler la base à distance.
+* MongoDB est accessible depuis l’extérieur
+* Mongo Express est accessible en HTTPS avec authentification
+* Connexion et manipulation à distance par des collègues
 
 ---
 
-## Partie 2 – Développement de la Vitrine Node.js + MongoDB
+## Partie 2 – Déploiement Replica Set MongoDB
 
-Une vitrine web élégante et minimaliste, réalisée avec **HTML/CSS/JS côté client** et un **backend Node.js + Express** connecté à **MongoDB** pour stocker des messages utilisateurs.
+Déploiement de trois instances MongoDB dans un Replica Set avec authentification sécurisée.
+
+### Docker Compose initial
+
+```yaml
+services:
+
+  mongo1:
+    image: mongo
+    container_name: mongo1
+    restart: always
+    ports:
+      - 27018:27017
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: Impale4-Deranged2-Backside8-Euphemism0-Derived6-Unboxed4
+    volumes:
+      - /volume3/docker/nosql-replica/mongo1:/data/db
+    networks:
+      - mongo-replica-net
+
+  mongo2:
+    image: mongo
+    container_name: mongo2
+    restart: always
+    ports:
+      - 27019:27017
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: Impale4-Deranged2-Backside8-Euphemism0-Derived6-Unboxed4
+    volumes:
+      - /volume3/docker/nosql-replica/mongo2:/data/db
+    networks:
+      - mongo-replica-net
+
+  mongo3:
+    image: mongo
+    container_name: mongo3
+    restart: always
+    ports:
+      - 27020:27017
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: Impale4-Deranged2-Backside8-Euphemism0-Derived6-Unboxed4
+    volumes:
+      - /volume3/docker/nosql-replica/mongo3:/data/db
+    networks:
+      - mongo-replica-net
+
+networks:
+  mongo-replica-net:
+    driver: bridge
+```
+
+### Clé d’authentification (keyfile)
+
+```bash
+cd /volume3/docker/nosql-replica/
+touch mongodb-keyfile
+chmod 600 mongodb-keyfile
+openssl rand -base64 756 > mongodb-keyfile
+chmod 600 mongodb-keyfile
+```
+
+### Docker Compose avec clé partagée
+
+```yaml
+...
+    command: ["--replSet", "rs0", "--bind_ip_all", "--auth", "--keyFile", "/etc/mongo-keyfile/mongodb-keyfile"]
+...
+    volumes:
+      - /volume3/docker/nosql-replica/mongodb-keyfile:/etc/mongo-keyfile/mongodb-keyfile:ro
+```
+
+### Permissions
+
+```bash
+chown 999:999 /volume3/docker/nosql-replica/mongodb-keyfile
+chmod 400 /volume3/docker/nosql-replica/mongodb-keyfile
+```
+
+### Initialisation Replica Set
+
+```bash
+docker exec -it mongo1 mongosh -u root -p 'Impale4-Deranged2-Backside8-Euphemism0-Derived6-Unboxed4' --authenticationDatabase admin
+```
+
+```js
+rs.initiate({
+  _id: "rs0",
+  members: [
+    { _id: 0, host: "mongo1:27017" },
+    { _id: 1, host: "mongo2:27017" },
+    { _id: 2, host: "mongo3:27017" }
+  ]
+})
+```
+
+### Connexion URI + Préférence de lecture
+
+URI standard :
+
+```
+mongodb://root:motdepasse@mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+```
+
+Lecture secondaire :
+
+```
+mongodb://root:motdepasse@mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0&readPreference=secondary
+```
+
+---
+
+## Partie 3 – Développement de la Vitrine Node.js + MongoDB
 
 ### Structure du projet
 
 ```
 .
 ├── docs/
-│   └── install-standalone.md     # Documentation d'installation MongoDB standalone
+│   └── install-standalone.md     
 ├── mongo/
 │   └── standalone/
-│       └── docker-compose.yml    # Déploiement MongoDB via Docker Compose
-├── node_modules/                # Modules Node.js installés
+│       └── docker-compose.yml    
+│   └── replica/
+│       └── docker-compose.yml
+├── node_modules/                
 ├── pages/
-│   └── index.html               # Page HTML principale (frontend)
-├── .gitignore                   # Fichiers/dossiers ignorés par Git
-├── package.json                 # Dépendances et scripts npm
-├── package-lock.json            # Fichier de verrouillage des dépendances
-├── README.md                    # Documentation du projet
-├── index.js                     # Serveur Node.js simple
-└── server.js                    # Backend Express + Mongoose
+│   └── index.html               
+├── .gitignore                   
+├── package.json                 
+├── package-lock.json            
+├── README.md                    
+├── index.js                     
+└── server.js                    
 ```
 
----
-
-### Étapes de mise en place
-
-#### 1. Cloner le projet
-
-```bash
-git clone https://github.com/MathisGredt/NoSQL
-```
-
-Ou crée un dossier manuellement et place les fichiers dedans.
-
-#### 2. Initialiser le projet Node.js
+### Mise en place
 
 ```bash
 npm init -y
-```
-
-#### 3. Installer les dépendances
-
-```bash
 npm install express mongoose cors dotenv
 npm install --save-dev nodemon
 ```
 
-#### 4. Créer un serveur simple (optionnel pour test)
-
-Créer un fichier `index.js` :
+#### `index.js` (serveur simple)
 
 ```js
 const express = require('express');
@@ -136,7 +258,7 @@ app.listen(PORT, () => {
 });
 ```
 
-Scripts à ajouter dans `package.json` :
+#### `package.json`
 
 ```json
 "scripts": {
@@ -145,7 +267,7 @@ Scripts à ajouter dans `package.json` :
 }
 ```
 
-#### 5. Lancer le backend principal
+### Lancer le backend principal
 
 ```bash
 node server.js
@@ -153,15 +275,13 @@ node server.js
 
 Accès backend : [http://localhost:8081](http://localhost:8081)
 
-#### 6. Lancer le frontend
+### Lancer le frontend
 
-Ouvre le fichier `pages/index.html` dans ton navigateur.
-
-> Le frontend contient un bouton permettant d’envoyer un message via `fetch()` vers le backend Node + MongoDB.
+Ouvre le fichier `pages/index.html` dans le navigateur.
 
 ---
 
-### Fichier `.gitignore`
+## Fichier `.gitignore`
 
 ```
 node_modules/
@@ -195,8 +315,8 @@ node_modules/
 
 ---
 
-
 ## Autres fichiers utiles
 
 * `docs/install-standalone.md` : guide d'installation locale de MongoDB
-* `mongo/standalone/docker-compose.yml` : configuration MongoDB via Docker
+* `mongo/standalone/docker-compose.yml` : configuration MongoDB standalone
+* `mongo/replica/docker-compose.yml` : configuration Replica Set MongoDB via Docker
