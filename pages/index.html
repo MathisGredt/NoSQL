@@ -100,7 +100,8 @@
 
   <script>
     function cta() {
-      alert("Merci de votre visite ! Plus à venir très bientôt.");
+    //   redirect to a specific page or perform an action
+      window.location.href = "http://localhost:3000/api/messages"; // Change to your desired URL
     }
       async function sendMessage() {
     const text = document.getElementById('messageInput').value;

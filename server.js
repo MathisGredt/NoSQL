@@ -8,18 +8,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
+
 mongoose.connect('mongodb://root:Penholder9-Commodore4-Nutshell0-Empower9-Removed7-Sternum6@82.65.159.85:27017/', {
-  // plus besoin de ces options
+
 });
 mongoose.connect('mongodb://root:Penholder9-Commodore4-Nutshell0-Empower9-Removed7-Sternum6@82.65.159.85:27017/', {
-  dbName: 'test' // <-- précise le nom de la base ici
+  dbName: 'test'
 })
 .then(() => console.log("✅ Connecté à MongoDB"))
 .catch((err) => console.error("❌ Erreur MongoDB :", err));
 
 
-// Schema
 const MessageSchema = new mongoose.Schema({
   text: String,
   date: { type: Date, default: Date.now }
@@ -40,7 +39,6 @@ app.post('/api/messages', async (req, res) => {
   res.status(201).json(newMessage);
 });
 
-// Start server
 const PORT = 3000;
 
 app.listen(PORT, () => {
