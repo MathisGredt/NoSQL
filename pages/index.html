@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Vitrine Élégante</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vitrine Redis Cache</title>
   <style>
-    /* Import Google Font */
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap');
 
     :root {
       --bg-color: #0e0e10;
       --text-color: #f5f5f5;
       --accent-color: #00ffe0;
+      --success-color: #00ff88;
+      --warning-color: #ff6b35;
     }
 
     * {
@@ -24,40 +25,45 @@
       font-family: 'Outfit', sans-serif;
       background: var(--bg-color);
       color: var(--text-color);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
-      overflow: hidden;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
     }
 
     h1 {
       font-size: 3rem;
       margin-bottom: 1rem;
-      letter-spacing: 1px;
-      animation: fadeInDown 1s ease forwards;
+      text-align: center;
+      color: var(--accent-color);
     }
 
-    p {
-      font-size: 1.2rem;
-      max-width: 600px;
-      margin: 0 auto 2rem;
-      opacity: 0.8;
-      animation: fadeIn 1.5s ease forwards;
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      padding: 2rem;
+      margin: 2rem 0;
+      border: 1px solid rgba(0, 255, 224, 0.2);
+    }
+
+    .section h2 {
+      color: var(--accent-color);
+      margin-bottom: 1rem;
     }
 
     button {
-      padding: 0.8rem 2rem;
+      padding: 0.8rem 1.5rem;
       background: transparent;
       color: var(--accent-color);
       border: 2px solid var(--accent-color);
-      border-radius: 30px;
+      border-radius: 8px;
       font-size: 1rem;
       cursor: pointer;
       transition: all 0.3s ease;
-      animation: fadeInUp 2s ease forwards;
+      margin: 0.5rem;
     }
 
     button:hover {
@@ -65,62 +71,258 @@
       color: #000;
     }
 
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
+    .results {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-left: 4px solid var(--accent-color);
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    .cache-hit {
+      color: var(--success-color);
     }
 
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+    .cache-miss {
+      color: var(--warning-color);
     }
 
-    footer {
-      position: absolute;
-      bottom: 20px;
-      font-size: 0.9rem;
-      color: #888;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .stat-card {
+      background: rgba(0, 255, 224, 0.1);
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+
+    input {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid var(--accent-color);
+      color: white;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Bienvenue dans l'Excellence</h1>
-    <p>Un design sobre, élégant et percutant pour marquer les esprits et sublimer vos idées.</p>
-    <button onclick="cta()">Découvrir</button>
-  </main>
-  <footer>
-    &copy; 2025 Vitrine Ultra Classe
-  </footer>
+  <div class="container">
+    <h1>🚀 Redis Cache Demo</h1>
+    
+    <div class="section">
+      <h2>⚡ Test Performance Cache</h2>
+      <p>Teste la différence de performance entre une requête avec et sans cache Redis.</p>
+      
+      <button onclick="testCachePerformance()">🧪 Test Performance</button>
+      <button onclick="testMultipleRequests()">🔄 Test Multiple (5x)</button>
+      
+      <div id="performance-results" class="results" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>📊 Statistiques Cache</h2>
+      
+      <button onclick="getCacheStats()">📈 Voir Stats</button>
+      <button onclick="resetStats()">🗑️ Reset Cache</button>
+      
+      <div id="stats-display" class="stats-grid" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>💬 Messages avec Cache</h2>
+      <p>Compare les messages normaux vs cachés (TTL: 30s)</p>
+      
+      <button onclick="getMessages(false)">📝 Messages Normaux</button>
+      <button onclick="getMessages(true)">⚡ Messages Cachés</button>
+      
+      <div id="messages-results" class="results" style="display: none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>🔧 Tests Manuels</h2>
+      
+      <input type="text" id="testId" placeholder="ID à tester">
+      <button onclick="testSpecificId()">🎯 Test ID Spécifique</button>
+      
+      <div id="manual-results" class="results" style="display: none;"></div>
+    </div>
+  </div>
 
   <script>
-    function cta() {
-    //   redirect to a specific page or perform an action
-      window.location.href = "http://localhost:3000/api/messages"; // Change to your desired URL
+    async function testCachePerformance() {
+      const resultsDiv = document.getElementById('performance-results');
+      resultsDiv.style.display = 'block';
+      resultsDiv.innerHTML = '<p>🔄 Test en cours...</p>';
+      
+      const testId = Math.floor(Math.random() * 1000);
+      
+      try {
+        const start1 = Date.now();
+        const response1 = await fetch(`/api/slow-data/${testId}`);
+        const result1 = await response1.json();
+        const time1 = Date.now() - start1;
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const start2 = Date.now();
+        const response2 = await fetch(`/api/slow-data/${testId}`);
+        const result2 = await response2.json();
+        const time2 = Date.now() - start2;
+        
+        resultsDiv.innerHTML = `
+          <h3>🎯 Résultats Test Performance (ID: ${testId})</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
+            <div class="cache-miss">
+              <h4>❌ 1er Appel (Cache Miss)</h4>
+              <p><strong>Temps:</strong> ${time1}ms</p>
+              <p><strong>Source:</strong> ${result1.fromCache ? 'Cache' : 'Base de données'}</p>
+              <p><strong>Temps serveur:</strong> ${result1.responseTime}</p>
+            </div>
+            <div class="cache-hit">
+              <h4>✅ 2ème Appel (Cache Hit)</h4>
+              <p><strong>Temps:</strong> ${time2}ms</p>
+              <p><strong>Source:</strong> ${result2.fromCache ? 'Cache Redis' : 'Base de données'}</p>
+              <p><strong>Temps serveur:</strong> ${result2.responseTime}</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${Math.round((time1/time2) * 10) / 10}x</div>
+            <p>Plus rapide avec le cache</p>
+          </div>
+        `;
+      } catch (error) {
+        resultsDiv.innerHTML = `<p style="color: red;">❌ Erreur: ${error.message}</p>`;
+      }
     }
-      async function sendMessage() {
-    const text = document.getElementById('messageInput').value;
-    if (!text) return alert("Écris quelque chose !");
     
-    // const res = await fetch('http://localhost:3000/api/messages', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ text })
-    // });
-
-
-    if (res.ok) {
-      alert("Message envoyé !");
-      document.getElementById('messageInput').value = "";
-    } else {
-      alert("Erreur lors de l'envoi.");
+    async function testMultipleRequests() {
+      const resultsDiv = document.getElementById('performance-results');
+      resultsDiv.style.display = 'block';
+      resultsDiv.innerHTML = '<p>🔄 Test de 5 requêtes en cours...</p>';
+      
+      const testId = Math.floor(Math.random() * 1000);
+      const times = [];
+      
+      for (let i = 0; i <5; i++) {
+        const start = Date.now();
+        await fetch(`/api/slow-data/${testId}`);
+        times.push(Date.now() - start);
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      resultsDiv.innerHTML = `
+        <h3>📊 Test 5 Requêtes Consécutives (ID: ${testId})</h3>
+        ${times.map((time, i) => `
+          <p><strong>Requête ${i+1}:</strong> ${time}ms ${i === 0 ? '(Cache Miss)' : '(Cache Hit)'}</p>
+        `).join('')}
+        <div class="stat-card">
+          <div class="stat-number">${Math.round(times[0] / times[1] * 10) / 10}x</div>
+          <p>Amélioration après mise en cache</p>
+        </div>
+      `;
     }
+    
+    async function getCacheStats() {
+      try {
+        const response = await fetch('/api/cache-stats');
+        const stats = await response.json();
+        
+        const statsDiv = document.getElementById('stats-display');
+        statsDiv.style.display = 'grid';
+        statsDiv.innerHTML = `
+          <div class="stat-card">
+            <div class="stat-number">${stats.hits}</div>
+            <p>Cache Hits</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${stats.misses}</div>
+            <p>Cache Misses</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${stats.total}</div>
+            <p>Total Requêtes</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${stats.hitRate}%</div>
+            <p>Taux de Réussite</p>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Erreur stats:', error);
+      }
     }
+    
+    async function resetStats() {
+      try {
+        await fetch('/api/cache', { method: 'DELETE' });
+        alert('✅ Cache vidé !');
+        getCacheStats();
+      } catch (error) {
+        alert('❌ Erreur: ' + error.message);
+      }
+    }
+    
+    async function getMessages(cached) {
+      const resultsDiv = document.getElementById('messages-results');
+      resultsDiv.style.display = 'block';
+      
+      const endpoint = cached ? '/api/messages-cached' : '/api/messages';
+      const start = Date.now();
+      
+      try {
+        const response = await fetch(endpoint);
+        const result = await response.json();
+        const time = Date.now() - start;
+        
+        resultsDiv.innerHTML = `
+          <h3>${cached ? '⚡ Messages Cachés' : '📝 Messages Normaux'}</h3>
+          <p><strong>Temps de réponse:</strong> ${time}ms</p>
+          ${cached ? `<p><strong>Source:</strong> ${result.fromCache ? 'Cache Redis' : 'Base MongoDB'}</p>` : ''}
+          <p><strong>Nombre de messages:</strong> ${cached ? result.data.length : result.length}</p>
+        `;
+      } catch (error) {
+        resultsDiv.innerHTML = `<p style="color: red;">❌ Erreur: ${error.message}</p>`;
+      }
+    }
+    
+    async function testSpecificId() {
+      const testId = document.getElementById('testId').value || Math.floor(Math.random() * 100);
+      const resultsDiv = document.getElementById('manual-results');
+      resultsDiv.style.display = 'block';
+      
+      try {
+        const start = Date.now();
+        const response = await fetch(`/api/slow-data/${testId}`);
+        const result = await response.json();
+        const time = Date.now() - start;
+        
+        resultsDiv.innerHTML = `
+          <h3>🎯 Test ID: ${testId}</h3>
+          <p><strong>Temps total:</strong> ${time}ms</p>
+          <p><strong>Temps serveur:</strong> ${result.responseTime}</p>
+          <p><strong>Source:</strong> ${result.fromCache ? '⚡ Cache Redis' : '🐌 Base de données lente'}</p>
+          <p><strong>Timestamp:</strong> ${result.timestamp}</p>
+          <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 4px; margin-top: 1rem;">${JSON.stringify(result.data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        resultsDiv.innerHTML = `<p style="color: red;">❌ Erreur: ${error.message}</p>`;
+      }
+    }
+    
+    setInterval(getCacheStats, 5000);
+    getCacheStats();
   </script>
 </body>
 </html>

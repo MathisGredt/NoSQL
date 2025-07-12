@@ -1,0 +1,49 @@
+services:
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    restart: always
+    ports:
+      - "6380:6379"
+    command: redis-server --requirepass masterpass --masterauth masterpass
+    volumes:
+      - redis-master-data:/data
+    networks:
+      - redis-replica-net
+
+  redis-slave1:
+    image: redis:latest
+    container_name: redis-slave1
+    restart: always
+    ports:
+      - "6381:6379"
+    command: redis-server --slaveof redis-master 6379 --requirepass slavepass --masterauth masterpass
+    volumes:
+      - redis-slave1-data:/data
+    networks:
+      - redis-replica-net
+    depends_on:
+      - redis-master
+
+  redis-slave2:
+    image: redis:latest
+    container_name: redis-slave2
+    restart: always
+    ports:
+      - "6382:6379"
+    command: redis-server --slaveof redis-master 6379 --requirepass slavepass --masterauth masterpass
+    volumes:
+      - redis-slave2-data:/data
+    networks:
+      - redis-replica-net
+    depends_on:
+      - redis-master
+
+volumes:
+  redis-master-data:
+  redis-slave1-data:
+  redis-slave2-data:
+
+networks:
+  redis-replica-net:
+    driver: bridge
